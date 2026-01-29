@@ -12,70 +12,42 @@ if [ ! -d ".git" ]; then
 fi
 
 DOCS_PATH="/docs"
+INDEX_FILE="/tmp/docs_index"
 mkdir -p "$DOCS_PATH"
 
-# Criar branch órfã 'docs' se não existir
+commit_to_docs() {
+  MSG="$1"
+
+  rm -f "$INDEX_FILE"
+  if git rev-parse --verify docs >/dev/null 2>&1; then
+    GIT_INDEX_FILE="$INDEX_FILE" git read-tree docs
+  fi
+
+  GIT_INDEX_FILE="$INDEX_FILE" GIT_WORK_TREE="$DOCS_PATH" git add -A
+
+  if ! GIT_INDEX_FILE="$INDEX_FILE" git diff --cached --quiet; then
+    TREE=$(GIT_INDEX_FILE="$INDEX_FILE" git write-tree)
+
+    if git rev-parse --verify docs >/dev/null 2>&1; then
+      PARENT=$(git rev-parse docs)
+      COMMIT=$(git commit-tree "$TREE" -p "$PARENT" -m "$MSG")
+    else
+      COMMIT=$(git commit-tree "$TREE" -m "$MSG")
+    fi
+
+    git update-ref refs/heads/docs "$COMMIT"
+    return 0
+  fi
+  return 1
+}
+
 if ! git rev-parse --verify docs >/dev/null 2>&1; then
   echo "Creating orphan branch 'docs'..."
 
-  EMPTY_TREE=$(git hash-object -t tree /dev/null)
-  COMMIT=$(git commit-tree "$EMPTY_TREE" -m "initial docs branch")
-  git branch docs "$COMMIT"
+  echo '*' > "$DOCS_PATH/.gitignore"
+  cp /SETUP.md "$DOCS_PATH/MCP_SETUP.md"
 
-  cat > "$DOCS_PATH/MCP_SETUP.md" << 'EOF'
-# Configuração do MCP (Model Context Protocol)
-
-Para conectar este servidor de conhecimento ao Claude, Cursor ou outro cliente MCP, adicione a seguinte configuração no arquivo de configuração do seu cliente:
-
-## Localização do arquivo de configuração
-
-- **Claude Desktop (macOS):** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Claude Desktop (Windows):** `%APPDATA%\Claude\claude_desktop_config.json`
-- **Cursor:** `.cursor/mcp.json` na raiz do projeto ou configurações globais
-
-## Configuração
-
-```json
-{
-  "mcpServers": {
-    "knowledge": {
-      "command": "docker",
-      "args": [
-        "exec",
-        "-i",
-        "knowledge",
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/docs"
-      ]
-    }
-  }
-}
-```
-
-## Ferramentas disponíveis após configuração
-
-- `read_file` - Ler arquivos de documentação
-- `write_file` - Criar novos arquivos
-- `edit_file` - Editar arquivos existentes
-- `list_directory` - Listar diretórios
-- `create_directory` - Criar diretórios
-- `move_file` - Mover/renomear arquivos
-
-## Verificação
-
-Para testar se o servidor está funcionando:
-
-```bash
-docker exec -i knowledge npx -y @modelcontextprotocol/server-filesystem /docs
-```
-
-Se o comando não retornar erro, o servidor está pronto para uso.
-EOF
-
-  GIT_WORK_TREE="$DOCS_PATH" git add -A
-  GIT_WORK_TREE="$DOCS_PATH" git commit --allow-empty -m "initial docs branch"
+  commit_to_docs "initial docs branch"
   git push -u origin docs || echo "WARNING: unable to push initial docs branch"
 else
   # Extrair arquivos da branch docs para /docs
@@ -90,12 +62,10 @@ while true; do
   inotifywait -r -e close_write,move,create,delete . >/dev/null 2>&1
   now=$(date +"%Y-%m-%d %H:%M:%S")
 
-  # Commit usando a branch docs diretamente
   cd /knowledge
-  GIT_WORK_TREE="$DOCS_PATH" git add -A
-  GIT_WORK_TREE="$DOCS_PATH" git diff --cached --quiet || \
-    GIT_WORK_TREE="$DOCS_PATH" git commit -m "auto: $now"
-  git push origin docs || echo "WARNING: git push failed"
+  if commit_to_docs "auto: $now"; then
+    git push origin docs || echo "WARNING: git push failed"
+  fi
 
   cd "$DOCS_PATH"
   echo "$now"
