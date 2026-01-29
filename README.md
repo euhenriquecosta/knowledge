@@ -8,6 +8,8 @@ Container para **base de conhecimento em Markdown** com:
 
 Inspirado em práticas de projetos open source que usam `docs/` como raiz de documentação (MkDocs, Sphinx, etc.). [web:76][web:77][web:82]
 
+Ideal para usar com Claude, Cursor e outros clientes MCP, mantendo documentação versionada em Git.
+
 ---
 
 ## Visão geral
@@ -46,21 +48,6 @@ meu-projeto/
 └── docker-compose.yml
 ```
 
-Peço desculpas! Você está certo. Deixa eu corrigir o README.md completo formatado corretamente para copiar tudo:
-
-````markdown
-# matizzee/knowledge
-
-Imagem Docker para gerenciar uma base de conhecimento em Markdown com IA:
-
-- Monta sua pasta `docs/` dentro do container em `/knowledge`.
-- Sobe um **Filesystem MCP Server** apontando para `/knowledge`.
-- Faz **auto-commit e auto-push** em uma branch Git órfã chamada `docs` a cada alteração.
-
-Ideal para usar com Claude, Cursor e outros clientes MCP, mantendo documentação versionada em Git.
-
----
-
 ## Requisitos
 
 - Git já inicializado no projeto (`.git` existente).
@@ -76,7 +63,6 @@ meu-projeto/
 │   └── README.md
 └── (outros arquivos do projeto)
 ```
-````
 
 ---
 
@@ -105,6 +91,8 @@ docker run -d \
   matizzee/knowledge:latest
 ```
 
+> **Nota:** O container usa **git worktree** internamente para trabalhar na branch `docs` em `/docs`, sem alterar a branch atual do seu repositório local.
+
 Ou com `docker-compose`:
 
 ```yaml
@@ -129,10 +117,11 @@ docker compose up -d knowledge
 
 Ao iniciar, ele:
 
-1. Entra em `/knowledge`.
-2. Usa o `.git` montado em `/knowledge/.git`.
-3. Garante que existe uma **branch órfã `docs`**:
-    - Se não existir, cria uma orphan `docs`, limpa o worktree, cria um `README.md` inicial e faz o primeiro commit.
+1. Lê o `.git` montado em `/git`.
+2. Garante que existe uma **branch órfã `docs`**:
+    - Se não existir, cria uma orphan `docs`, cria arquivos iniciais (`README.md` e `MCP_SETUP.md`) e faz o primeiro commit.
+3. Cria um **git worktree** em `/knowledge` apontando para a branch `docs`.
+    - Isso isola completamente a branch `docs` sem alterar a branch atual do seu repositório local.
 4. Sobe o **Filesystem MCP Server** com root em `/knowledge`.
 5. Fica monitorando `/knowledge` com `inotifywait`:
     - Sempre que algum arquivo mudar, roda:
@@ -140,7 +129,7 @@ Ao iniciar, ele:
         - `git commit --allow-empty -m "auto: <timestamp>"`
         - `git push origin docs`
 
-Você continua usando `main` (ou outra branch) para o código; a branch `docs` fica só para documentação.
+Você continua usando `main` (ou outra branch) para o código; a branch `docs` fica só para documentação. **Sua branch local nunca é alterada.**
 
 ---
 
@@ -228,3 +217,7 @@ docs/
 - Não há conflito entre as branches
 
 Essa configuração é **opcional** — escolha conforme sua preferência de organização.
+
+```
+
+```
