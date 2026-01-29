@@ -48,7 +48,6 @@ if ! git rev-parse --verify docs >/dev/null 2>&1; then
   cp /SETUP.md "$DOCS_PATH/MCP_SETUP.md"
 
   commit_to_docs "initial docs branch"
-  git push -u origin docs || echo "WARNING: unable to push initial docs branch"
 else
   # Extrair arquivos da branch docs para /docs
   git archive docs | tar -x -C "$DOCS_PATH"
@@ -58,15 +57,13 @@ echo "Watching $DOCS_PATH for changes..."
 
 cd "$DOCS_PATH"
 
-while true; do
-  inotifywait -r -e close_write,move,create,delete . >/dev/null 2>&1
+while inotifywait -r -e close_write,move,create,delete "$DOCS_PATH" >/dev/null 2>&1; do
   now=$(date +"%Y-%m-%d %H:%M:%S")
 
   cd /knowledge
   if commit_to_docs "auto: $now"; then
-    git push origin docs || echo "WARNING: git push failed"
+    echo "commited: $now"
   fi
 
   cd "$DOCS_PATH"
-  echo "$now"
 done
