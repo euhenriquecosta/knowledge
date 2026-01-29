@@ -1,6 +1,6 @@
 FROM alpine:3.20
 
-RUN apk add --no-cache git inotify-tools
+RUN apk add --no-cache git inotify-tools nodejs npm
 
 WORKDIR /knowledge
 
