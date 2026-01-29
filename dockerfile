@@ -5,6 +5,7 @@ RUN apk add --no-cache git inotify-tools nodejs npm
 WORKDIR /knowledge
 
 COPY --chmod=755 entrypoint.sh /entrypoint.sh
+COPY SETUP.md /SETUP.md
 
 RUN npm install -g @modelcontextprotocol/server-filesystem
 
