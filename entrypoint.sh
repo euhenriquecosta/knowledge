@@ -61,7 +61,7 @@ while inotifywait -r -e close_write,move,create,delete "$DOCS_PATH" >/dev/null 2
   now=$(date +"%Y-%m-%d %H:%M:%S")
 
   cd /knowledge
-  if commit_to_docs "auto: $now"; then
+  if commit_to_docs "$now"; then
     echo "commited: $now"
   fi
 
