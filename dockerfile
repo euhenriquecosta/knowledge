@@ -6,4 +6,6 @@ WORKDIR /knowledge
 
 COPY --chmod=755 entrypoint.sh /entrypoint.sh
 
+RUN npm install -g @modelcontextprotocol/server-filesystem
+
 ENTRYPOINT ["/entrypoint.sh"]
